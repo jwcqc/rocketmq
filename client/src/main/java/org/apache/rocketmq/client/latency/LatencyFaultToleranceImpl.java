@@ -98,7 +98,13 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
 
     class FaultItem implements Comparable<FaultItem> {
         private final String name;
+        /**
+         * 延迟
+         */
         private volatile long currentLatency;
+        /**
+         * 开始可用时间
+         */
         private volatile long startTimestamp;
 
         public FaultItem(final String name) {

@@ -177,10 +177,13 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         ServerBootstrap childHandler =
             this.serverBootstrap.group(this.eventLoopGroupBoss, this.eventLoopGroupSelector)
                 .channel(useEpoll() ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
+                    //服务端处理客户端连接请求是顺序处理的，所以同一时间只能处理一个客户端连接，
+                    // 多个客户端来的时候，服务端将不能处理的客户端连接请求放在队列中等待处理，
+                    // backlog参数指定了队列的大小
                 .option(ChannelOption.SO_BACKLOG, 1024)
                 .option(ChannelOption.SO_REUSEADDR, true)
-                .option(ChannelOption.SO_KEEPALIVE, false)
-                .childOption(ChannelOption.TCP_NODELAY, true)
+                .option(ChannelOption.SO_KEEPALIVE, false) //当设置该选项以后，如果在两小时内没有数据的通信时,TCP会自动发送一个活动探测数据报文。
+                .childOption(ChannelOption.TCP_NODELAY, true) //该参数的作用就是禁止使用Nagle算法，使用于小数据即时传输
                 .childOption(ChannelOption.SO_SNDBUF, nettyServerConfig.getServerSocketSndBufSize())
                 .childOption(ChannelOption.SO_RCVBUF, nettyServerConfig.getServerSocketRcvBufSize())
                 .localAddress(new InetSocketAddress(this.nettyServerConfig.getListenPort()))
@@ -193,8 +196,11 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                             .addLast(defaultEventExecutorGroup,
                                 new NettyEncoder(),
                                 new NettyDecoder(),
+                                    //Netty自带的心跳管理器
                                 new IdleStateHandler(0, 0, nettyServerConfig.getServerChannelMaxIdleTimeSeconds()),
+                                    //连接管理器，他负责捕获新连接、连接断开、异常等事件，然后统一调度到NettyEventExecuter处理器处理。
                                 new NettyConnectManageHandler(),
+                                    //当一个消息经过前面的解码等步骤后，然后调度到channelRead0方法，然后根据消息类型进行分发
                                 new NettyServerHandler()
                             );
                     }
