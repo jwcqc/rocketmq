@@ -27,19 +27,27 @@ import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class PullMessageRequestHeader implements CommandCustomHeader {
     @CFNotNull
-    private String consumerGroup;
+    private String consumerGroup; // 消费者分组
     @CFNotNull
     private String topic;
     @CFNotNull
     private Integer queueId;
     @CFNotNull
-    private Long queueOffset;
+    private Long queueOffset;  // 队列开始位置
     @CFNotNull
     private Integer maxMsgNums;
+
+    /**
+     * 系统标识
+     * 第 0 位 FLAG_COMMIT_OFFSET ：标记请求提交消费进度位置，和 commitOffset 配合。
+     * 第 1 位 FLAG_SUSPEND ：标记请求是否挂起请求，和 suspendTimeoutMillis 配合。
+     *     当拉取不到消息时， Broker 会挂起请求，直到有消息。最大挂起时间：suspendTimeoutMillis 毫秒。
+     * 第 2 位 FLAG_SUBSCRIPTION ：是否过滤订阅表达式，和 subscription 配置
+     */
     @CFNotNull
     private Integer sysFlag;
     @CFNotNull
-    private Long commitOffset;
+    private Long commitOffset;  // 提交消费进度位置
     @CFNotNull
     private Long suspendTimeoutMillis;
     @CFNullable

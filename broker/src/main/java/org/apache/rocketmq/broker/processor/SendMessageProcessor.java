@@ -93,6 +93,14 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             this.brokerController.getMessageStore().isTransientStorePoolDeficient();
     }
 
+    /**
+     * 当 Consumer 消费某条消息失败时，会调用该接口发回消息。Broker 会存储发回的消息。
+     * 这样，下次 Consumer 拉取该消息，能够从 CommitLog 和 ConsumeQueue 顺序读取。
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     private RemotingCommand consumerSendMsgBack(final ChannelHandlerContext ctx, final RemotingCommand request)
         throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);

@@ -1007,6 +1007,13 @@ public class MQClientInstance {
         return null;
     }
 
+    /**
+     * 获得Broker信息
+     * @param brokerName
+     * @param brokerId
+     * @param onlyThisBroker 是否必须是该broker
+     * @return
+     */
     public FindBrokerResult findBrokerAddressInSubscribe(
         final String brokerName,
         final long brokerId,
@@ -1022,6 +1029,7 @@ public class MQClientInstance {
             slave = brokerId != MixAll.MASTER_ID;
             found = brokerAddr != null;
 
+            // 如果不强制获得，选择一个Broker
             if (!found && !onlyThisBroker) {
                 Entry<Long, String> entry = map.entrySet().iterator().next();
                 brokerAddr = entry.getValue();

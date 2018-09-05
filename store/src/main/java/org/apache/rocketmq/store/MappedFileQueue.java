@@ -195,6 +195,13 @@ public class MappedFileQueue {
         long createOffset = -1;
         MappedFile mappedFileLast = getLastMappedFile();
 
+        /**
+         * 从下面代码可以得出，MappedFile的文件命名规则如下：
+         * 1、fileName[n] = fileName[n - 1] + n * mappedFileSize
+         * 2、fileName[0] = startOffset - (startOffset % this.mappedFileSize)
+         *
+         * 其中公式2计算出来的是，以 this.mappedFileSize 为每个文件大小时，startOffset 所在文件的开始offset
+         */
         if (mappedFileLast == null) {
             createOffset = startOffset - (startOffset % this.mappedFileSize);
         }
@@ -221,6 +228,7 @@ public class MappedFileQueue {
             }
 
             if (mappedFile != null) {
+                // 设置 MappedFile是否是第一个创建的文件。该标识用于 ConsumeQueue 对应的 MappedFile
                 if (this.mappedFiles.isEmpty()) {
                     mappedFile.setFirstCreateInQueue(true);
                 }
@@ -422,6 +430,11 @@ public class MappedFileQueue {
         return deleteCount;
     }
 
+    /**
+     *
+     * @param flushLeastPages flush最小页数
+     * @return
+     */
     public boolean flush(final int flushLeastPages) {
         boolean result = true;
         MappedFile mappedFile = this.findMappedFileByOffset(this.flushedWhere, this.flushedWhere == 0);

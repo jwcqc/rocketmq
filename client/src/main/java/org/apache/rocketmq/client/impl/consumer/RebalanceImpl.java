@@ -216,6 +216,10 @@ public abstract class RebalanceImpl {
         }
     }
 
+    /**
+     *
+     * @param isOrder 是否顺序消息
+     */
     public void doRebalance(final boolean isOrder) {
         Map<String, SubscriptionData> subTable = this.getSubscriptionInner();
         if (subTable != null) {
@@ -231,6 +235,7 @@ public abstract class RebalanceImpl {
             }
         }
 
+        // 移除未订阅的topic对应的消息队列
         this.truncateMessageQueueNotMyTopic();
     }
 
@@ -273,7 +278,7 @@ public abstract class RebalanceImpl {
                 if (mqSet != null && cidAll != null) {
                     List<MessageQueue> mqAll = new ArrayList<MessageQueue>();
                     mqAll.addAll(mqSet);
-
+                    // 因为各 Consumer 是在本地分配消息队列，排序后才能保证各 Consumer 顺序一致。
                     Collections.sort(mqAll);
                     Collections.sort(cidAll);
 
@@ -313,6 +318,11 @@ public abstract class RebalanceImpl {
         }
     }
 
+    /**
+     * 移除未订阅的消息队列。
+     * 当调用 DefaultMQPushConsumer#unsubscribe(topic) 时，
+     * 只移除订阅主题集合( subscriptionInner )，对应消息队列移除在该方法。
+     */
     private void truncateMessageQueueNotMyTopic() {
         Map<String, SubscriptionData> subTable = this.getSubscriptionInner();
 
@@ -328,6 +338,15 @@ public abstract class RebalanceImpl {
         }
     }
 
+    /**
+     * 当负载均衡时，更新 消息处理队列
+     * - 移除 在processQueueTable && 不存在于 mqSet 里的消息队列
+     * - 增加 不在processQueueTable && 存在于mqSet 里的消息队列
+     * @param topic
+     * @param mqSet 负载均衡结果后的消息队列数组
+     * @param isOrder
+     * @return
+     */
     private boolean updateProcessQueueTableInRebalance(final String topic, final Set<MessageQueue> mqSet,
         final boolean isOrder) {
         boolean changed = false;
@@ -346,7 +365,10 @@ public abstract class RebalanceImpl {
                         changed = true;
                         log.info("doRebalance, {}, remove unnecessary mq, {}", consumerGroup, mq);
                     }
-                } else if (pq.isPullExpired()) {
+                } else if (pq.isPullExpired()) { // 队列拉取超时，进行清理
+                    // 队列拉取超时，即 当前时间 - 最后一次拉取消息时间 > 120s ( 120s 可配置)，
+                    // 判定发生 BUG，过久未进行消息拉取，移除消息队列。
+                    // 移除后，下面#新增队列逻辑#可以重新加入新的该消息队列。
                     switch (this.consumeType()) {
                         case CONSUME_ACTIVELY:
                             break;
@@ -366,6 +388,7 @@ public abstract class RebalanceImpl {
             }
         }
 
+        // 增加 不在processQueueTable && 存在于mqSet 里的消息队列。
         List<PullRequest> pullRequestList = new ArrayList<PullRequest>();
         for (MessageQueue mq : mqSet) {
             if (!this.processQueueTable.containsKey(mq)) {

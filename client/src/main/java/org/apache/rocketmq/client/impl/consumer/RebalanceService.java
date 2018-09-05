@@ -36,6 +36,12 @@ public class RebalanceService extends ServiceThread {
     public void run() {
         log.info(this.getServiceName() + " service started");
 
+        /**
+         * 目前有三种情况情况下触发：
+         * 等待超时，每 20s 调用一次。
+         * PushConsumer 启动时，调用 rebalanceService#wakeup(...) 触发
+         * Broker 通知 Consumer 加入或移除时，Consumer 响应通知，调用 rebalanceService#wakeup(...) 触发。
+         */
         while (!this.isStopped()) {
             this.waitForRunning(waitInterval);
             this.mqClientFactory.doRebalance();
